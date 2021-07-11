@@ -1,136 +1,100 @@
 import os
+import shutil
 
 
-def replace_spaces(path="", walk=False, replacement="_"):
-    """Replace spaces with undersceres in all file names.
-
-    Ignores hidden files and folders.
-    """
-    if not path:
-        path = os.getcwd()
-
-    if path[-1] == "/":
-        path = path[:-1]
-
-    if walk:
-        for root, dirs, files in os.walk(path):
-            dirs[:] = [d for d in dirs if not d[0] == "."]
-            for filename in files:
-                if filename[0] != ".":
-                    os.rename(root + "/" + filename, root + "/" + filename.replace(" ", replacement))
-    else:
-        for filename in next(os.walk(path))[2]:
-            if filename[0] != ".":
-                os.rename(path + "/" + filename, path + "/" + filename.replace(" ", replacement))
-
-
-def replace(to_repl: str, repl: str, path="", walk=False):
+def replace(to_repl: str, repl: str, path="", walk=False) -> None:
     """Replace to_repl string with repl string in all file names.
 
-    Ignores hidden files and folders.
+    Parameters:
+        to_repl (str): String being replaced
+        repl (str): String to replace with
+        path (str): File directory. By default, current directory
+        walk (bool): If True, renames files in subfolders also
     """
     if not path:
         path = os.getcwd()
-
-    if path[-1] == "/":
-        path = path[:-1]
 
     if walk:
         for root, dirs, files in os.walk(path):
             dirs[:] = [d for d in dirs if not d[0] == "."]
             for filename in files:
                 if filename[0] != ".":
-                    print(filename)
                     file, file_extension = os.path.splitext(filename)
-                    print(file, file_extension)
-                    os.rename(root + "/" + filename, root + "/" + file.replace(to_repl, repl) + file_extension)
+                    os.rename(os.path.join(root, filename),
+                              os.path.join(root, file.replace(to_repl, repl) + file_extension))
     else:
         for filename in next(os.walk(path))[2]:
             if filename[0] != ".":
                 file, file_extension = os.path.splitext(filename)
-                print(file, file_extension)
-                os.rename(path + "/" + filename, path + "/" + file.replace(to_repl, repl) + file_extension)
+                os.rename(os.path.join(path, filename),
+                          os.path.join(path, file.replace(to_repl, repl) + file_extension))
 
 
-def add_prefix(prefix: str, extension="", path="", walk=False):
-    """Add prefix to filename."""
+def add_prefix_suffix(fix: str, add_as="prefix", extension="", path="", walk=False) -> None:
+    """Add fix string as prefix or suffix before filetype to all files or files with extension if specified.
+    
+    Parameters:
+        fix (str): String to add as prefix or suffix
+        add_as (str): 'prefix' or 'suffix'
+        extension (str): Optionally specify file extension of files that can be renamed
+        path (str): File directory. By default, current directory
+        walk (bool): If True, renames files in subfolders also
+    """
     if not path:
         path = os.getcwd()
 
-    if path[-1] == "/":
-        path = path[:-1]
-    if not extension:
-        if walk:
-            for root, dirs, files in os.walk(path):
-                dirs[:] = [d for d in dirs if not d[0] == "."]
-                for filename in files:
-                    if filename[0] != ".":
-                        os.rename(root + "/" + filename, root + "/" + prefix + filename)
-        else:
-            for filename in next(os.walk(path))[2]:
-                if filename[0] != ".":
-                    os.rename(path + "/" + filename, path + "/" + prefix + filename)
+    if walk:
+        for root, dirs, files in os.walk(path):
+            dirs[:] = [d for d in dirs if not d[0] == "."]
+            for filename in files:
+                file, file_extension = os.path.splitext(filename)
+                if filename[0] != "." and (file_extension == extension or not extension):
+                    if add_as == "prefix":
+                        os.rename(os.path.join(root, filename),
+                                  os.path.join(root, fix + filename))
+                    elif add_as == "suffix":
+                        os.rename(os.path.join(root, filename),
+                                  os.path.join(root, file + fix + file_extension))
+
     else:
-        if walk:
-            for root, dirs, files in os.walk(path):
-                dirs[:] = [d for d in dirs if not d[0] == "."]
-                file_extension = os.path.splitext(filename)[1]
-                print(file_extension)
-                for filename in files:
-                    if filename[0] != "." and file_extension == extension:
-                        os.rename(root + "/" + filename, root + "/" + prefix + filename)
-        else:
-            for filename in next(os.walk(path))[2]:
-                file_extension = os.path.splitext(filename)[1]
-                if filename[0] != "." and file_extension == extension:
-                    os.rename(path + "/" + filename, path + "/" + prefix + filename)
+        for filename in next(os.walk(path))[2]:
+            file, file_extension = os.path.splitext(filename)
+            if filename[0] != "." and (file_extension == extension or not extension):
+                if add_as == "prefix":
+                    os.rename(os.path.join(path, filename),
+                              os.path.join(path, fix + filename))
+                elif add_as == "suffix":
+                    os.rename(os.path.join(path, filename),
+                              os.path.join(path, file + fix + file_extension))
 
 
-def add_suffix(suffix: str, extension="", path="", walk=False):
-    """Add suffix to filename, before filetype."""
+def collect(key: str, folder_name: str, key_location="contains", extension="", path="") -> None:
+    """Move files with key located in filename to folder names folder_name.
+    Creates folder with folder_name if folder doesn't exist.
+
+    Parameters:
+        key (str): String to check for
+        folder_name (str): String specifing folder name to move files into.
+        key_location (str): 'contains', 'prefix' or 'suffix'. Specifies location of string. 
+        extension (str): Optionally specify file extension of files that can be moved
+        path (str): File directory. By default, current directory
+    """
     if not path:
         path = os.getcwd()
-
     if path[-1] == "/":
         path = path[:-1]
 
-    if not extension:
-        if walk:
-            for root, dirs, files in os.walk(path):
-                dirs[:] = [d for d in dirs if not d[0] == "."]
-                for filename in files:
-                    if filename[0] != "." and "." in filename:
-                        file, file_extension = os.path.splitext(filename)
-                        os.rename(
-                                root + "/" + filename,
-                                root + "/" + file + suffix + file_extension)
-        else:
-            for filename in next(os.walk(path))[2]:
-                if filename[0] != "." and "." in filename:
-                    file, file_extension = os.path.splitext(filename)
-                    os.rename(
-                                path + "/" + filename,
-                                path + "/" + file + suffix + file_extension)
-    else:
-        if walk:
-            for root, dirs, files in os.walk(path):
-                dirs[:] = [d for d in dirs if not d[0] == "."]
-                for filename in files:
-                    file, file_extension = os.path.splitext(filename)
-                    if file_extension == extension:
-                        os.rename(
-                                root + "/" + filename,
-                                root + "/" + file + suffix + file_extension)
-        else:
-            for filename in next(os.walk(path))[2]:
-                if filename[0] != ".":
-                    file, file_extension = os.path.splitext(filename)
-                    if file_extension == extension:
-                        os.rename(
-                                path + "/" + filename,
-                                path + "/" + file + suffix + file_extension)
+    # Add folder if folder doesn't exist
+    destination = os.path.join(path, folder_name)
+    if not os.path.isdir(destination):
+        os.mkdir(destination)
 
-
-replace(repl="hey", to_repl="hel", walk=True)
-# add_prefix(prefix="inle's_", extension=".docx")
-# add_suffix(suffix="_inle", extension=".docx")
+    for filename in next(os.walk(path))[2]:
+        if filename[0] != ".":
+            file, file_extension = os.path.splitext(filename)
+            if file_extension == extension or not extension:
+                if (key_location == "contains" and key in file or
+                        key_location == "prefix" and file[:len(key)] == key or
+                        key_location == "suffix" and file[-len(key):]):
+                    shutil.move(os.path.join(path, filename),
+                                os.path.join(destination, filename))
